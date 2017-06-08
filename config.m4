@@ -65,9 +65,9 @@ if test "$PHP_LEVELDB" != "no"; then
 
  PHP_REQUIRE_CXX()
 
- PHP_ADD_LIBRARY(stdc++, "", EXTRA_LDFLAGS)
+ PHP_ADD_LIBRARY(stdc++, 1, EXTRA_LDFLAGS)
 
- CPPFILE="leveldb.cpp"
+ PHP_SUBST(LEVELDB_SHARED_LIBADD)
 
- PHP_NEW_EXTENSION(leveldb, $CPPFILE, $ext_shared , -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+ PHP_NEW_EXTENSION(leveldb, leveldb.cpp, $ext_shared , -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 fi

@@ -69,11 +69,78 @@ PHP_FUNCTION(confirm_leveldb_compiled)
 
 PHP_FUNCTION(leveldb_open) 
 {
+	char *name = NULL;
+	size_t name_len;
+	
 	if ( db != NULL ) {
 		php_error_docref(NULL, E_WARNING, "the leveldb is not closed");
 
 		RETURN_FALSE;
 	}
+
+	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "s", &name, &name_len) == FAILURE ) {
+		RETURN_FALSE;
+	}
+
+	Options options;
+	options.create_if_missing = true;
+
+	Status status = DB::Open(options, name, &db);
+	if ( ! status.ok() ) {
+		RETURN_FALSE;
+	}
+
+	RETURN_TRUE;
+}
+
+PHP_FUNCTION(leveldb_put) 
+{
+	char *key, *val;
+	size_t key_len, val_len;
+
+	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &key, &key_len, &val, &val_len ) == FAILURE ) {
+		RETURN_FALSE;
+	}
+
+	if ( db == NULL ) {
+		php_error_docref(NULL, E_WARNING, "the leveldb has closed");
+
+		RETURN_FALSE;
+	}
+
+	Status status = db->Put(WriteOptions(), key, val);
+	if ( ! status.ok() ) { 
+		RETURN_FALSE;
+	}
+	
+	RETURN_TRUE;
+}
+
+PHP_FUNCTION(leveldb_get) 
+{
+	char *key;
+	string val;
+	size_t key_len;
+
+	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "s", &key, &key_len) == FAILURE ) {
+		RETURN_FALSE;
+	}
+	
+	Status status = db->Get(ReadOptions(), key, &val);
+	if ( ! status.ok() ) {
+		RETURN_FALSE;
+	}
+	
+	const char *ret = val.data();
+
+	RETURN_STRING(ret);
+}
+
+PHP_FUNCTION(leveldb_close) 
+{
+	if ( db != NULL ) delete db;
+
+	RETURN_TRUE;
 }
 
 /* }}} */
@@ -161,6 +228,9 @@ PHP_MINFO_FUNCTION(leveldb)
 const zend_function_entry leveldb_functions[] = {
 	PHP_FE(confirm_leveldb_compiled,	NULL)		/* For testing, remove later. */
 	PHP_FE(leveldb_open, NULL)			
+	PHP_FE(leveldb_put, NULL)			
+	PHP_FE(leveldb_get, NULL)			
+	PHP_FE(leveldb_close, NULL)			
 	PHP_FE_END	/* Must be the last line in leveldb_functions[] */
 };
 /* }}} */

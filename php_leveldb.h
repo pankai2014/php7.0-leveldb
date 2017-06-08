@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author: will<pan.kai@icloud.com                                      |
+  | Author:                                                              |
   +----------------------------------------------------------------------+
 */
 
@@ -21,7 +21,11 @@
 #ifndef PHP_LEVELDB_H
 #define PHP_LEVELDB_H
 
-#include "leveldb/db.h"
+#include<leveldb/db.h>
+#include<pthread.h>
+#include<string>
+
+using namespace std;
 using namespace leveldb;
 
 extern zend_module_entry leveldb_module_entry;
@@ -44,14 +48,17 @@ extern zend_module_entry leveldb_module_entry;
 /*
   	Declare any global variables you may need between the BEGIN
 	and END macros here:
+
+ZEND_BEGIN_MODULE_GLOBALS(leveldb)
+	zend_long  global_value;
+	char *global_string;
+ZEND_END_MODULE_GLOBALS(leveldb)
 */
-//ZEND_BEGIN_MODULE_GLOBALS(leveldb)
-//	DB *db;
-//	//zend_long  global_value;
-//	//char *global_string;
-//ZEND_END_MODULE_GLOBALS(leveldb)
 
 PHP_FUNCTION(leveldb_open);
+PHP_FUNCTION(leveldb_put);
+PHP_FUNCTION(leveldb_get);
+PHP_FUNCTION(leveldb_close);
 
 /* Always refer to the globals in your function as LEVELDB_G(variable).
    You are encouraged to rename these macros something shorter, see
