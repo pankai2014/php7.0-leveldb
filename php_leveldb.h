@@ -13,6 +13,7 @@
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
   | Author: will<pan.kai@icloud.com>                                     |
+  | Date: 2017/06/10													 |
   +----------------------------------------------------------------------+
 */
 
@@ -22,16 +23,19 @@
 #define PHP_LEVELDB_H
 
 #include<leveldb/db.h>
-#include<pthread.h>
 #include<string>
 
 using namespace std;
 using namespace leveldb;
 
+static leveldb::DB *db = NULL;
+static zend_class_entry  *leveldb_entry  = NULL;
+static zend_class_entry  *iterator_entry = NULL;
+
 extern zend_module_entry leveldb_module_entry;
 #define phpext_leveldb_ptr &leveldb_module_entry
 
-#define PHP_LEVELDB_VERSION "0.1.0" /* Replace with version number for your extension */
+#define PHP_LEVELDB_VERSION "0.1.3" /* Replace with version number for your extension */
 
 #ifdef PHP_WIN32
 #	define PHP_LEVELDB_API __declspec(dllexport)
@@ -45,6 +49,27 @@ extern zend_module_entry leveldb_module_entry;
 #include "TSRM.h"
 #endif
 
+Options		 leveldb_options(zval *_options);
+ReadOptions  leveldb_read_options(zval *_options);
+WriteOptions leveldb_write_options(zval *_options);
+
+PHP_METHOD(LevelDB, __construct);
+PHP_METHOD(LevelDB, get);
+PHP_METHOD(LevelDB, put);
+PHP_METHOD(LevelDB, delete);
+PHP_METHOD(LevelDB, __destruct);
+
+PHP_METHOD(LevelDBIterator, __construct);
+PHP_METHOD(LevelDBIterator, key);
+PHP_METHOD(LevelDBIterator, prev);
+PHP_METHOD(LevelDBIterator, next);
+PHP_METHOD(LevelDBIterator, valid);
+PHP_METHOD(LevelDBIterator, rewind);
+PHP_METHOD(LevelDBIterator, last);
+PHP_METHOD(LevelDBIterator, current);
+PHP_METHOD(LevelDBIterator, status);
+PHP_METHOD(LevelDBIterator, __destruct);
+
 /*
   	Declare any global variables you may need between the BEGIN
 	and END macros here:
@@ -54,11 +79,6 @@ ZEND_BEGIN_MODULE_GLOBALS(leveldb)
 	char *global_string;
 ZEND_END_MODULE_GLOBALS(leveldb)
 */
-
-PHP_FUNCTION(leveldb_open);
-PHP_FUNCTION(leveldb_put);
-PHP_FUNCTION(leveldb_get);
-PHP_FUNCTION(leveldb_close);
 
 /* Always refer to the globals in your function as LEVELDB_G(variable).
    You are encouraged to rename these macros something shorter, see
