@@ -160,6 +160,12 @@ Options leveldb_options(zval *_options)
 							options.block_restart_interval = (int)zval_get_long(value);
 						}
 
+						if ( zend_string_equals_literal(str_idx, "compression") ) {
+							options.compression = (CompressionType)zval_get_long(value);
+						}
+
+						break;
+					case IS_NULL:
 						break;
 					default:
 						php_error_docref(NULL, E_WARNING, "Option(%s) value must be string, boolean or long", ZSTR_VAL(str_idx));
@@ -202,6 +208,9 @@ ReadOptions leveldb_read_options(zval *_options)
 
 						break;
 					case IS_LONG:
+						break;
+					case IS_NULL:
+						break;
 					default:
 						php_error_docref(NULL, E_WARNING, "Option(%s) value must be string, boolean or long", ZSTR_VAL(str_idx));
 
@@ -239,6 +248,9 @@ WriteOptions leveldb_write_options(zval *_options)
 					case IS_FALSE:
 						break;
 					case IS_LONG:
+						break;
+					case IS_NULL:
+						break;
 					default:
 						php_error_docref(NULL, E_WARNING, "Option(%s) value must be string, boolean or long", ZSTR_VAL(str_idx));
 
@@ -399,6 +411,9 @@ PHP_MINIT_FUNCTION(leveldb)
 
 	zend_declare_property_null(iterator_entry, "iterator",	    sizeof("iterator") - 1,		 ZEND_ACC_PUBLIC);
 	zend_declare_property_null(iterator_entry, "iterator_type", sizeof("iterator_type") - 1, ZEND_ACC_PUBLIC);
+
+	REGISTER_LONG_CONSTANT("LEVELDB_NO_COMPRESSION",	 kNoCompression,	 CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("LEVELDB_SNAPPY_COMPRESSION", kSnappyCompression, CONST_CS | CONST_PERSISTENT);
 
 	return SUCCESS;
 }
