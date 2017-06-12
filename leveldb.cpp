@@ -31,7 +31,8 @@
 /* If you declare any globals in php_leveldb.h uncomment this:
 ZEND_DECLARE_MODULE_GLOBALS(leveldb)
 */
-leveldb::Iterator *it;
+zend_class_entry  *leveldb_entry;
+zend_class_entry  *iterator_entry;
 
 /* True global resources - no need for thread safety here */
 
@@ -45,34 +46,11 @@ PHP_INI_END()
 */
 /* }}} */
 
-/* Remove the following function when you have successfully modified config.m4
-   so that your module can be compiled into PHP, it exists only for testing
-   purposes. */
-
-/* Every user-visible function in PHP should document itself in the source */
-/* {{{ proto string confirm_leveldb_compiled(string arg)
-   Return a string to confirm that the module is compiled in */
-PHP_FUNCTION(confirm_leveldb_compiled)
-{
-	char *arg = NULL;
-	size_t arg_len, len;
-	zend_string *strg;
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &arg, &arg_len) == FAILURE) {
-		return;
-	}
-
-	strg = strpprintf(0, "Congratulations! You have successfully modified ext/%.78s/config.m4. Module %.78s is now compiled into PHP.", "leveldb", arg);
-
-	RETURN_STR(strg);
-}
-/* }}} */
 /* The previous line is meant for vim and emacs, so it can correctly fold and
    unfold functions in source code. See the corresponding marks just before
    function definition, where the functions purpose is also documented. Please
    follow this convention for the convenience of others editing your code.
 */
-
 
 /* {{{ php_leveldb_init_globals
  */
@@ -116,7 +94,6 @@ ZEND_END_ARG_INFO()
  * Every user visible function must have an entry in leveldb_functions[].
  */
 const zend_function_entry leveldb_functions[] = {
-	PHP_FE(confirm_leveldb_compiled, NULL)		/* For testing, remove later. */
 	PHP_ME(LevelDB, __construct, arginfo_construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
 	PHP_ME(LevelDB, put, arginfo_put, ZEND_ACC_PUBLIC)
 	PHP_ME(LevelDB, get, arginfo_get, ZEND_ACC_PUBLIC)
@@ -271,20 +248,26 @@ WriteOptions leveldb_write_options(zval *_options)
 	return options;
 }
 
+void leveldb_destroy_handler(zend_resource *rsrc TSRMLS_DC) 
+{
+	leveldb::DB *db = (leveldb::DB *) rsrc->ptr;
+	
+	delete db;
+}
+
 PHP_METHOD(LevelDB, __construct) 
 {
 	char *name = NULL;
 	size_t name_len;
+
+	zval leveldb;
+	int leveldb_number;
+
+	leveldb::DB *db = NULL;
 	
 	zval *_options	     = NULL;
 	zval *_read_options  = NULL;
 	zval *_write_options = NULL;
-
-	if ( db != NULL ) {
-		php_error_docref(NULL, E_WARNING, "the leveldb is not closed");
-
-		RETURN_NULL();
-	}
 
 	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "s|a!a!a!", &name, &name_len, &_options, &_read_options, &_write_options) == FAILURE ) {
 		RETURN_NULL();
@@ -294,11 +277,22 @@ PHP_METHOD(LevelDB, __construct)
 
 	Status status = DB::Open(options, name, &db);
 	if ( ! status.ok() ) {
+		php_error_docref(NULL, E_WARNING, "leveldb open faild");
+
 		RETURN_NULL();
 	}
 
-	ReadOptions read_options = leveldb_read_options(_read_options);
-	it = db->NewIterator(leveldb::ReadOptions());
+	int leveldb_type = zend_register_list_destructors_ex(leveldb_destroy_handler, NULL, LEVELDB_TYPE, leveldb_number);
+	zend_update_property_long(leveldb_entry, getThis(), "leveldb_type", sizeof("leveldb_type") - 1, leveldb_type);
+
+	zend_resource *_leveldb = zend_register_resource(db, leveldb_type);
+	ZVAL_RES(&leveldb, _leveldb);
+
+	zend_update_property(leveldb_entry, getThis(), "leveldb", sizeof("leveldb") - 1, &leveldb);
+
+	if ( _read_options ) {
+		zend_update_property(leveldb_entry, getThis(), "read_options", sizeof("read_options") - 1, _read_options);
+	}
 }
 
 PHP_METHOD(LevelDB, get) 
@@ -312,6 +306,8 @@ PHP_METHOD(LevelDB, get)
 	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "s|a!", &key, &key_len, &_read_options) == FAILURE ) {
 		RETURN_FALSE;
 	}
+	
+	leveldb_fetch_db_ptr(getThis(), leveldb_type, leveldb);
 
 	ReadOptions options = leveldb_read_options(_read_options);
 
@@ -336,14 +332,10 @@ PHP_METHOD(LevelDB, put)
 		RETURN_FALSE;
 	}
 
-	if ( db == NULL ) {
-		php_error_docref(NULL, E_WARNING, "the leveldb has closed");
-
-		RETURN_FALSE;
-	}
+	leveldb_fetch_db_ptr(getThis(), leveldb_type, leveldb);
 	
 	WriteOptions options = leveldb_write_options(_write_options);
-	
+
 	Status status = db->Put(options, key, val);
 	if ( ! status.ok() ) { 
 		RETURN_FALSE;
@@ -363,6 +355,8 @@ PHP_METHOD(LevelDB, delete)
 		RETURN_FALSE;
 	}
 
+	leveldb_fetch_db_ptr(getThis(), leveldb_type, leveldb);
+
 	WriteOptions options = leveldb_write_options(_options);
 
 	Status status = db->Delete(options, key);
@@ -375,9 +369,7 @@ PHP_METHOD(LevelDB, delete)
 
 PHP_METHOD(LevelDB, __destruct) 
 {
-	if ( db != NULL ) delete db;
-	if ( leveldb_entry  != NULL ) free(leveldb_entry);
-	if ( iterator_entry != NULL ) free(iterator_entry);
+
 }
 
 /* {{{ PHP_MINIT_FUNCTION
@@ -395,6 +387,13 @@ PHP_MINIT_FUNCTION(leveldb)
 
 	leveldb_entry  = zend_register_internal_class(&_leveldb_entry);
 	iterator_entry = zend_register_internal_class(&_iterator_entry);
+
+	zend_declare_property_null(leveldb_entry,  "leveldb",	    sizeof("leveldb") - 1,		 ZEND_ACC_PRIVATE);
+	zend_declare_property_null(leveldb_entry,  "leveldb_type",  sizeof("leveldb_type") - 1,	 ZEND_ACC_PRIVATE);
+	zend_declare_property_null(leveldb_entry,  "read_options",  sizeof("read_options") - 1,	 ZEND_ACC_PUBLIC);
+
+	zend_declare_property_null(iterator_entry, "iterator",	    sizeof("iterator") - 1,		 ZEND_ACC_PUBLIC);
+	zend_declare_property_null(iterator_entry, "iterator_type", sizeof("iterator_type") - 1, ZEND_ACC_PUBLIC);
 
 	return SUCCESS;
 }

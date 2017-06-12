@@ -26,33 +26,51 @@
 #include "ext/standard/info.h"
 #include "php_leveldb.h"
 
-extern leveldb::Iterator *it;
-
-static bool _assert();
-
-static bool _assert() 
+void iterator_destroy_handler(zend_resource *rsrc TSRMLS_DC) 
 {
-	if ( it == NULL ) { 
-		php_error_docref(NULL, E_WARNING, "the interator ptr is null");
+	leveldb::Iterator *it = (leveldb::Iterator *) rsrc->ptr;
 
-		return true;
-	}
-
-	return false;
+	delete it; 
 }
 
 PHP_METHOD(LevelDBIterator, __construct)
 {
-	zval *leveldb = NULL;
+	zval *object = NULL;
+	zval iterator;
 
-	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "o!", &leveldb) == FAILURE ) {
+	int iterator_number;
+
+	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "o!", &object) == FAILURE ) {
 		 RETURN_NULL();
 	}
+	
+	zval *rv;   
+	zval *leveldb      = zend_read_property(leveldb_entry, object, "leveldb",      sizeof("leveldb") - 1,      0, rv); 
+	zval *leveldb_type = zend_read_property(leveldb_entry, object, "leveldb_type", sizeof("leveldb_type") - 1, 0, rv);
+	zval *read_options = zend_read_property(leveldb_entry, object, "read_options", sizeof("read_options") - 1, 0, rv);
+
+	leveldb::DB *db = (leveldb::DB *)zend_fetch_resource(Z_RES_P(leveldb), LEVELDB_TYPE, zval_get_long(leveldb_type)); 
+	if ( db == NULL ) { 
+		php_error_docref(NULL, E_WARNING, "getting leveldb resource faild"); 
+
+		RETURN_FALSE; 
+	}
+	
+	int iterator_type = zend_register_list_destructors_ex(iterator_destroy_handler, NULL, LEVELDB_TYPE, iterator_number);
+	zend_update_property_long(iterator_entry, getThis(), "iterator_type", sizeof("iterator_type") - 1, iterator_type);
+
+	ReadOptions options = leveldb_read_options(read_options);
+	leveldb::Iterator *it = db->NewIterator(options);
+
+	zend_resource *_iterator = zend_register_resource(it, iterator_type);
+	ZVAL_RES(&iterator, _iterator);
+
+	zend_update_property(iterator_entry, getThis(), "iterator",  sizeof("iterator") - 1, &iterator);
 }
 
 PHP_METHOD(LevelDBIterator, key) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	Slice slice = it->key();
 	string val  = slice.ToString();
@@ -64,21 +82,21 @@ PHP_METHOD(LevelDBIterator, key)
 
 PHP_METHOD(LevelDBIterator, prev) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	it->Prev();
 }
 
 PHP_METHOD(LevelDBIterator, next) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	it->Next();
 }
 
 PHP_METHOD(LevelDBIterator, valid) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	bool status = it->Valid();
 	if ( status ) {
@@ -88,21 +106,21 @@ PHP_METHOD(LevelDBIterator, valid)
 
 PHP_METHOD(LevelDBIterator, rewind) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	it->SeekToFirst();
 }
 
 PHP_METHOD(LevelDBIterator, last) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	it->SeekToLast();
 }
 
 PHP_METHOD(LevelDBIterator, current) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	Slice slice = it->value();
 	string val  = slice.ToString();
@@ -114,7 +132,7 @@ PHP_METHOD(LevelDBIterator, current)
 
 PHP_METHOD(LevelDBIterator, status) 
 {
-	if ( _assert() ) RETURN_FALSE;
+	leveldb_fetch_iterator_ptr(getThis(), iterator_type, iterator);
 
 	Status _status = it->status();
 	if ( _status.ok() ) {
@@ -126,5 +144,5 @@ PHP_METHOD(LevelDBIterator, status)
 
 PHP_METHOD(LevelDBIterator, __destruct)
 {
-	if ( it != NULL ) delete it;
+
 }

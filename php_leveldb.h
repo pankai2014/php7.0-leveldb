@@ -1,10 +1,7 @@
 /*
   +----------------------------------------------------------------------+
   | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2017 The PHP Group                                |
-  +----------------------------------------------------------------------+
-  | This source file is subject to version 3.01 of the PHP license,      |
+  +----------------------------------------------------------------------+ | Copyright (c) 1997-2017 The PHP Group                                | +----------------------------------------------------------------------+ | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
   | available through the world-wide-web at the following url:           |
   | http://www.php.net/license/3_01.txt                                  |
@@ -28,14 +25,16 @@
 using namespace std;
 using namespace leveldb;
 
-static leveldb::DB *db = NULL;
-static zend_class_entry  *leveldb_entry  = NULL;
-static zend_class_entry  *iterator_entry = NULL;
+#define LEVELDB_TYPE "leveldb"
+#define LEVELDB_ITERATOR_TYPE "leveldb_iterator"
+
+extern zend_class_entry  *leveldb_entry;
+extern zend_class_entry  *iterator_entry;
 
 extern zend_module_entry leveldb_module_entry;
 #define phpext_leveldb_ptr &leveldb_module_entry
 
-#define PHP_LEVELDB_VERSION "0.1.3" /* Replace with version number for your extension */
+#define PHP_LEVELDB_VERSION "0.1.5" /* Replace with version number for your extension */
 
 #ifdef PHP_WIN32
 #	define PHP_LEVELDB_API __declspec(dllexport)
@@ -49,9 +48,33 @@ extern zend_module_entry leveldb_module_entry;
 #include "TSRM.h"
 #endif
 
-Options		 leveldb_options(zval *_options);
-ReadOptions  leveldb_read_options(zval *_options);
-WriteOptions leveldb_write_options(zval *_options);
+#define leveldb_fetch_db_ptr(object, leveldb_type, leveldb) \
+zval *rv;	\
+zval *leveldb      = zend_read_property(leveldb_entry, object, "leveldb",      sizeof("leveldb") - 1,      0, rv); \
+zval *leveldb_type = zend_read_property(leveldb_entry, object, "leveldb_type", sizeof("leveldb_type") - 1, 0, rv); \
+\
+leveldb::DB *db = (leveldb::DB *)zend_fetch_resource(Z_RES_P(leveldb), LEVELDB_TYPE, zval_get_long(leveldb_type)); \
+if ( db == NULL ) { \
+	php_error_docref(NULL, E_WARNING, "getting leveldb resource faild"); \
+\
+	RETURN_FALSE; \
+}
+
+#define leveldb_fetch_iterator_ptr(object, iterator_type, iterator) \
+zval *rv;	\
+zval *iterator      = zend_read_property(leveldb_entry, object, "iterator",      sizeof("iterator") - 1,      0, rv); \
+zval *iterator_type = zend_read_property(leveldb_entry, object, "iterator_type", sizeof("iterator_type") - 1, 0, rv); \
+\
+leveldb::Iterator *it = (leveldb::Iterator *)zend_fetch_resource(Z_RES_P(iterator), LEVELDB_ITERATOR_TYPE, zval_get_long(iterator_type)); \
+if ( it == NULL ) { \
+	php_error_docref(NULL, E_WARNING, "getting iterator resource faild"); \
+\
+	RETURN_FALSE; \
+}
+
+extern Options		leveldb_options(zval *_options);
+extern ReadOptions  leveldb_read_options(zval *_options);
+extern WriteOptions leveldb_write_options(zval *_options);
 
 PHP_METHOD(LevelDB, __construct);
 PHP_METHOD(LevelDB, get);
@@ -69,6 +92,9 @@ PHP_METHOD(LevelDBIterator, last);
 PHP_METHOD(LevelDBIterator, current);
 PHP_METHOD(LevelDBIterator, status);
 PHP_METHOD(LevelDBIterator, __destruct);
+
+void leveldb_destroy_handler(zend_resource *rsrc TSRMLS_DC);
+void iterator_destroy_handler(zend_resource *rsrc TSRMLS_DC);
 
 /*
   	Declare any global variables you may need between the BEGIN
