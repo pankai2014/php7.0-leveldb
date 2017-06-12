@@ -1,6 +1,6 @@
 # php7.0-leveldb
 
-## leveldb　php7.0开发扩展
+## linux leveldb-php7.0开发扩展
 
 ### 兼容php5版本的leveldb扩展的所有用法
 
