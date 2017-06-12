@@ -130,6 +130,7 @@ Options leveldb_options(zval *_options)
 			if ( str_idx ) {
 				switch ( Z_TYPE_P(value) ) {
 					case IS_STRING:
+						break;
 					case IS_TRUE:
 						if ( zend_string_equals_literal(str_idx, "error_if_exists") ) {
 							options.error_if_exists = true;
@@ -141,6 +142,7 @@ Options leveldb_options(zval *_options)
 
 						break;
 					case IS_FALSE:
+						break;
 					case IS_LONG:
 						if ( zend_string_equals_literal(str_idx, "block_size") ) {
 							options.write_buffer_size = zval_get_long(value);
@@ -186,6 +188,7 @@ ReadOptions leveldb_read_options(zval *_options)
 			if ( str_idx ) {
 				switch ( Z_TYPE_P(value) ) {
 					case IS_STRING:
+						break;
 					case IS_TRUE:
 						if ( zend_string_equals_literal(str_idx, "verify_checksums") ) {
 							options.verify_checksums = true;
@@ -226,6 +229,7 @@ WriteOptions leveldb_write_options(zval *_options)
 			if ( str_idx ) {
 				switch ( Z_TYPE_P(value) ) {
 					case IS_STRING:
+						break;
 					case IS_TRUE:
 						if ( zend_string_equals_literal(str_idx, "sync") ) {
 							options.sync = true;
@@ -233,6 +237,7 @@ WriteOptions leveldb_write_options(zval *_options)
 
 						break;
 					case IS_FALSE:
+						break;
 					case IS_LONG:
 					default:
 						php_error_docref(NULL, E_WARNING, "Option(%s) value must be string, boolean or long", ZSTR_VAL(str_idx));
