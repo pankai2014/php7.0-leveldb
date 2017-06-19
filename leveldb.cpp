@@ -265,7 +265,7 @@ WriteOptions leveldb_write_options(zval *_options)
 	return options;
 }
 
-void leveldb_destroy_handler(zend_resource *rsrc TSRMLS_DC) 
+void leveldb_destroy_handler(zend_resource *rsrc) 
 {
 	leveldb::DB *db = (leveldb::DB *) rsrc->ptr;
 	

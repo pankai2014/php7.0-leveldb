@@ -26,7 +26,7 @@
 #include "ext/standard/info.h"
 #include "php_leveldb.h"
 
-void iterator_destroy_handler(zend_resource *rsrc TSRMLS_DC) 
+void iterator_destroy_handler(zend_resource *rsrc) 
 {
 	leveldb::Iterator *it = (leveldb::Iterator *) rsrc->ptr;
 
