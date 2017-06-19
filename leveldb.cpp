@@ -125,7 +125,7 @@ Options leveldb_options(zval *_options)
 	zend_ulong num_idx;
 	zend_string *str_idx;
 
-	if ( _options != NULL ) {
+	if ( _options != NULL && Z_TYPE_P(_options) == IS_ARRAY ) {
 		ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(_options), num_idx, str_idx, value) {
 			if ( str_idx ) {
 				switch ( Z_TYPE_P(value) ) {
@@ -189,7 +189,7 @@ ReadOptions leveldb_read_options(zval *_options)
 	zend_ulong num_idx;
 	zend_string *str_idx;
 
-	if ( _options != NULL ) {
+	if ( _options != NULL && Z_TYPE_P(_options) == IS_ARRAY ) {
 		ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(_options), num_idx, str_idx, value) {
 			if ( str_idx ) {
 				switch ( Z_TYPE_P(value) ) {
@@ -233,7 +233,7 @@ WriteOptions leveldb_write_options(zval *_options)
 	zend_ulong num_idx;
 	zend_string *str_idx;
 
-	if ( _options != NULL ) {
+	if ( _options != NULL && Z_TYPE_P(_options) == IS_ARRAY ) {
 		ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(_options), num_idx, str_idx, value) {
 			if ( str_idx ) {
 				switch ( Z_TYPE_P(value) ) {

@@ -40,7 +40,7 @@ PHP_METHOD(LevelDBIterator, __construct)
 
 	int iterator_number;
 
-	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "o!", &object) == FAILURE ) {
+	if ( zend_parse_parameters(ZEND_NUM_ARGS(), "o", &object) == FAILURE ) {
 		 RETURN_NULL();
 	}
 	
